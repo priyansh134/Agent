@@ -1,0 +1,85 @@
+/* Reset some basic styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Make the header cover the full screen width and height */
+.header {
+    position: relative;
+    width: 100%; /* Full width of the screen */
+    height: 20vh; /* Full height of the screen */
+    background-color: #003153; /* Dark background */
+    color: white; /* White text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    padding: 0 10px; /* Padding to ensure content doesn't touch the edges */
+}
+
+/* Brand box styling */
+.brand-box {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+.brand {
+    font-size: 1.5rem; /* Smaller font size */
+    font-weight: bold;
+    color: white;
+}
+
+/* Main heading styling */
+.heading-primary {
+    font-size: 2rem; /* Smaller font size */
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* Main heading text */
+.heading-primary-main {
+    display: block;
+    font-size: 2.5rem; /* Smaller font size */
+    margin-bottom: 10px;
+}
+
+/* Subheading text */
+.heading-primary-sub {
+    display: block;
+    font-size: 1rem; /* Smaller font size */
+    margin-top: 10px;
+}
+
+/* Button styling */
+.btn {
+    padding: 10px 30px; /* Slightly adjusted padding */
+    border: none;
+    background-color: #f39c12;
+    color: white;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-size: 1rem; /* Smaller font size */
+    margin-top: 30px;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+/* White button variant */
+.btn-white {
+    background-color: white;
+    color: #333;
+}
+
+/* Remove animations from the button */
+.btn-animated {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.btn-animated:hover {
+    color: white;
+    background-color: #f39c12;
+}

@@ -1,0 +1,87 @@
+/* Reset some basic styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Make the footer cover the full screen width and stick to the bottom */
+.footer {
+    position: fixed;  /* Fix the footer at the bottom of the screen */
+    bottom: 0;        /* Align it to the bottom */
+    left: 0;          /* Align it to the left */
+    width: 100%;      /* Full width of the screen */
+    height: 30vh;     /* Adjusted height for the footer */
+    background-color: #003153; /* Dark background */
+    color: white;     /* White text */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+    padding: 0 10px;  /* Padding to ensure content doesn't touch the edges */
+}
+
+/* Brand box styling for footer */
+.footer .brand-box {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+.footer .brand {
+    font-size: 2rem;
+    font-weight: bold;
+    color: white;
+}
+
+/* Main heading styling for footer */
+.footer .heading-primary {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* Main heading text for footer */
+.footer .heading-primary-main {
+    display: block;
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+/* Subheading text for footer */
+.footer .heading-primary-sub {
+    display: block;
+    font-size: 1.5rem;
+    margin-top: 10px;
+}
+
+/* Button styling for footer */
+.footer .btn {
+    padding: 12px 40px;
+    border: none;
+    background-color: #f39c12;
+    color: white;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin-top: 30px;
+    border-radius: 5px;
+    text-decoration: none;
+}
+
+/* White button variant for footer */
+.footer .btn-white {
+    background-color: white;
+    color: #333;
+}
+
+/* Remove animations from the button */
+.footer .btn-animated {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.footer .btn-animated:hover {
+    color: white;
+    background-color: #f39c12;
+}
