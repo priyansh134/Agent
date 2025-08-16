@@ -67,8 +67,8 @@ const LandingPages = () => {
   
   const navigate = useNavigate();
   const { login: userLogin, isAuthenticated } = useUser();
-  const url= "http://127.0.0.1:5000"
-  //const url = "https://dashboard-agent-2.onrender.com";
+  //const url= "http://127.0.0.1:5000"
+  const url = "https://dashboard-agent-2.onrender.com";
   
 
   // Redirect if already authenticated
