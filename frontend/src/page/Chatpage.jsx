@@ -62,7 +62,7 @@ const ChatPage = () => {
   const chatRecognition = useRef({});
   const interruptRecognition = useRef({}); // For detecting interruptions during AI speech
   //const url ="http://127.0.0.1:5000";
-  const url = "https://agent-1-ll31.onrender.com";
+  const url = "https://agent-last.onrender.com";
   const [dbModalOpen, setDbModalOpen] = useState(false);
   const [dbConn, setDbConn] = useState({ host: '', port: '3306', user: '', password: '', database: '', table: '' });
   const [dbSchema, setDbSchema] = useState(null);
