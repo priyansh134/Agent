@@ -486,15 +486,31 @@ def pyfmt_to_duckdb(fmt: str) -> str:
 
 
 def get_mysql_connection(params):
-	conn = mysql.connector.connect(
-		host=params.get('host'),
-		port=int(params.get('port', 3306)),
-		user=params.get('user'),
-		password=params.get('password'),
-		database=params.get('database'),
-	)
-	conn.autocommit = True
-	return conn
+    # Get CA certificate path from .env (make sure dotenv is loaded)
+    ca_path = os.getenv("CA")  
+
+    conn = mysql.connector.connect(
+        host=params.get('host'),
+        port=int(params.get('port')),
+        user=params.get('user'),
+        password=params.get('password'),
+        database=params.get('database'),
+        ssl_ca=ca_path   # <-- add CA certificate path here
+    )
+    conn.autocommit = True
+    return conn
+
+# def get_mysql_connection(params):
+ 
+# 	conn = mysql.connector.connect(
+# 		host=params.get('host'),
+# 		port=int(params.get('port')),
+# 		user=params.get('user'),
+# 		password=params.get('password'),
+# 		database=params.get('database'),
+# 	)
+# 	conn.autocommit = True
+# 	return conn
 
 @app.route('/db/schema', methods=['POST'])
 @token_required
