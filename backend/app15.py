@@ -1192,112 +1192,85 @@ def generate_sql():
 
 @app.route('/analyze_data', methods=['POST'])
 def analyze_data():
-	"""
-	Endpoint for AI-powered data analysis.
-	Accepts output data and user query, returns intelligent insights.
-	"""
-	print("📊 Analyze data endpoint called")
-	
-	if not google_api_key:
-		return jsonify({"error": "Google API key is not configured."}), 500
+    """
+    Endpoint for AI-powered data analysis.
+    Accepts output data and user query, returns intelligent insights.
+    """
+    print("📊 Analyze data endpoint called")
+    
+    if not google_api_key:
+        return jsonify({"error": "Google API key is not configured."}), 500
 
-	# Configure the Google Generative AI model
-	genai.configure(api_key=google_api_key)
-	model = genai.GenerativeModel("gemini-2.0-flash-exp")
+    # Configure the Google Generative AI model
+    genai.configure(api_key=google_api_key)
+    model = genai.GenerativeModel("gemini-2.0-flash-exp")
 
-	# Parse JSON data from the request
-	data = request.get_json()
-	if not data:
-		return jsonify({"error": "Missing request data."}), 400
+    # Parse JSON data from the request
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing request data."}), 400
 
-	# Validate required fields
-	if 'query' not in data or 'data' not in data:
-		return jsonify({"error": "Missing query or data fields."}), 400
+    # Validate required fields
+    if 'query' not in data or 'data' not in data:
+        return jsonify({"error": "Missing query or data fields."}), 400
 
-	original_query = data['query']
-	output_data = data['data']
-	
-	try:
-		# Convert the data to a more readable format for analysis
-		if isinstance(output_data, list) and len(output_data) > 0:
-			# Extract headers and a sample of rows for analysis
-			headers = output_data[0] if output_data else []
-			sample_rows = output_data[1:min(11, len(output_data))]  # Take first 10 data rows
-			total_rows = len(output_data) - 1  # Subtract header row
-			
-			# Identify likely business fields
-			lower_headers = [str(h).lower() for h in headers]
-			candidate_date_cols = [h for h in headers if any(k in str(h).lower() for k in ["date","time","created","updated","month","year"]) ]
-			candidate_value_cols = [h for h in headers if any(k in str(h).lower() for k in ["amount","revenue","sales","price","cost","profit","qty","quantity","count","value"]) ]
-			categorical_cols = [h for h in headers if h not in candidate_value_cols and h not in candidate_date_cols]
-			
-			# Format data for analysis
-			data_summary = f"Dataset Overview:\n"
-			data_summary += f"- Total Columns: {len(headers)}\n"
-			data_summary += f"- Total Rows: {total_rows}\n"
-			data_summary += f"- Column Names: {', '.join(headers)}\n"
-			if candidate_date_cols:
-				data_summary += f"- Date-like columns: {', '.join(candidate_date_cols)}\n"
-			if candidate_value_cols:
-				data_summary += f"- Numeric value columns: {', '.join(candidate_value_cols)}\n"
-			if categorical_cols:
-				data_summary += f"- Categorical columns: {', '.join(categorical_cols[:6])}\n"
-			data_summary += "\nSample Data (first 10 rows):\n"
-			for i, row in enumerate(sample_rows, 1):
-				data_summary += f"Row {i}: {dict(zip(headers, row))}\n"
-		else:
-			data_summary = "No data available for analysis."
+    original_query = data['query']
+    output_data = data['data']
+    
+    try:
+        # Convert the data to a more readable format for analysis
+        if isinstance(output_data, list) and len(output_data) > 0:
+            # Extract headers and a sample of rows for analysis
+            headers = output_data[0] if output_data else []
+            sample_rows = output_data[1:min(6, len(output_data))]  # Take first 5 data rows
+            total_rows = len(output_data) - 1  # Subtract header row
+            
+            # Format data for analysis
+            data_summary = f"Dataset Overview:\n"
+            data_summary += f"- Total Columns: {len(headers)}\n"
+            data_summary += f"- Total Rows: {total_rows}\n"
+            data_summary += f"- Column Names: {', '.join(headers)}\n\n"
+            
+            data_summary += "Sample Data (first 5 rows):\n"
+            for i, row in enumerate(sample_rows, 1):
+                data_summary += f"Row {i}: {dict(zip(headers, row))}\n"
+        else:
+            data_summary = "No data available for analysis."
 
-		# Create analysis prompt (business/action oriented)
-		analysis_prompt = f"""
-You are a senior analytics consultant. Based on the user's goal and the dataset sample, produce sharp business insights and specific actions.
+        # Create analysis prompt
+        analysis_prompt = f"""
+You are an expert data analyst. Analyze the following dataset and provide intelligent insights.
 
-User Goal: "{original_query}"
+Original User Query: "{original_query}"
 
 {data_summary}
 
-Instructions:
-- Focus on measurable, decision-ready insights. Quantify wherever possible (%, counts, ranges, top/bottom items).
-- Organize output using the following structure and headings exactly.
-- Tailor insights to common business areas (growth, retention, conversion, product, operations) depending on the columns present.
-- If time-related fields exist, comment on trends/seasonality; if categories exist, compare segments; if numeric KPIs exist, compute deltas and outliers conceptually.
-- When the provided sample is small, infer likely patterns and explicitly label them as hypotheses to validate.
+Please provide a comprehensive analysis that includes:
+1. **Key Insights**: What are the most important findings from this data?
+2. **Data Patterns**: What patterns, trends, or correlations do you notice?
+3. **Business Implications**: What do these results mean from a business perspective?
+4. **Recommendations**: What actionable recommendations can you provide based on this analysis?
+5. **Additional Questions**: What other questions should be explored with this data?
 
-Format:
-TITLE: 1 concise line that captures the key takeaway
-
-KEY METRICS:
-- List 3–5 metrics with numbers or proportions when feasible
-
-INSIGHTS:
-- 3–6 bullets linking metrics to business meaning (why it matters)
-
-OPPORTUNITIES & ACTIONS:
-- 3–5 concrete actions (with who/what/when), prioritized by impact; include quick wins and 1 longer-term play
-
-RISKS / WATCHOUTS:
-- 1–3 caveats or data quality notes (e.g., small sample, seasonality, missing fields)
-
-NEXT QUERIES:
-- 2–4 follow-up questions or data pulls that would validate or deepen the findings
+Make your response conversational, engaging, and easy to understand. Use emojis where appropriate to make it more visually appealing. Keep it concise but informative (aim for 3-4 paragraphs).
 """
 
-		print(f"📝 Analysis prompt created for query: {original_query}")
-		
-		# Generate analysis using the AI model
-		response = model.generate_content(analysis_prompt)
-		analysis_text = response.text.strip()
-		
-		print(f"✅ Analysis generated successfully")
-		
-		return jsonify({
-			"analysis": analysis_text,
-			"success": True
-		})
-		
-	except Exception as e:
-		print(f"❌ Error during analysis: {str(e)}")
-		return jsonify({"error": f"Error generating analysis: {str(e)}"}), 500
+        print(f"📝 Analysis prompt created for query: {original_query}")
+        
+        # Generate analysis using the AI model
+        response = model.generate_content(analysis_prompt)
+        analysis_text = response.text.strip()
+        
+        print(f"✅ Analysis generated successfully")
+        
+        return jsonify({
+            "analysis": analysis_text,
+            "success": True
+        })
+        
+    except Exception as e:
+        print(f"❌ Error during analysis: {str(e)}")
+        return jsonify({"error": f"Error generating analysis: {str(e)}"}), 500
 
 @app.route('/chat_with_data', methods=['POST'])
 def chat_with_data():

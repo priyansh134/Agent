@@ -18,7 +18,6 @@ import mysql.connector
 from contextlib import closing
 import numpy as np
 from decimal import Decimal
-import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -412,79 +411,6 @@ def upload_file():
 # MySQL integration
 # ==========================
 
-# --- Date format detection helpers ---
-DATE_REGEXES = [
-	# ISO date
-	(r"^\d{4}-\d{2}-\d{2}$", "%Y-%m-%d"),
-	(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", "%Y-%m-%d %H:%M:%S"),
-	(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$", "%Y-%m-%dT%H:%M:%S"),
-	# Slash formats (disambiguate day/month by values later)
-	(r"^\d{2}/\d{2}/\d{4}$", "D_SLASH_Y"),
-	(r"^\d{2}-\d{2}-\d{4}$", "D_DASH_Y"),
-	# With month short name
-	(r"^\d{2}-[A-Za-z]{3}-\d{4}$", "%d-%b-%Y"),
-	(r"^\d{2} [A-Za-z]{3} \d{4}$", "%d %b %Y"),
-]
-
-def _disambiguate_day_month(sample: str, sep: str) -> str:
-	parts = sample.split(sep)
-	# parts[0] and parts[1] are numbers
-	try:
-		first = int(parts[0])
-		second = int(parts[1])
-	except Exception:
-		return None
-	# If first > 12 then it's definitely day-first
-	if first > 12:
-		return "%d{sep}%m{sep}%Y".replace("{sep}", sep)
-	# If second > 12 then first must be month
-	if second > 12:
-		return "%m{sep}%d{sep}%Y".replace("{sep}", sep)
-	# Ambiguous; default to day-first (most non-US) to be explicit in prompt
-	return "%d{sep}%m{sep}%Y".replace("{sep}", sep)
-
-
-def detect_date_format_from_samples(values: list) -> str:
-	"""Return a python/strftime-like date format string if a clear format is detected, else None."""
-	if not values:
-		return None
-	samples = []
-	for v in values:
-		if v is None:
-			continue
-		vs = str(v).strip()
-		if len(vs) == 0:
-			continue
-		samples.append(vs)
-		if len(samples) >= 5:
-			break
-	if not samples:
-		return None
-	for s in samples:
-		for regex, fmt in DATE_REGEXES:
-			if re.match(regex, s):
-				if fmt == "D_SLASH_Y":
-					return _disambiguate_day_month(s, "/")
-				elif fmt == "D_DASH_Y":
-					return _disambiguate_day_month(s, "-")
-				else:
-					return fmt
-	# No match
-	return None
-
-
-def pyfmt_to_mysql(fmt: str) -> str:
-	"""Convert python/strftime style to MySQL STR_TO_DATE style (only minute token differs)."""
-	if not fmt:
-		return None
-	return fmt.replace("%M", "%i")
-
-
-def pyfmt_to_duckdb(fmt: str) -> str:
-	"""DuckDB uses strptime with standard tokens; just return fmt (T handled in SQL)."""
-	return fmt
-
-
 def get_mysql_connection(params):
 	conn = mysql.connector.connect(
 		host=params.get('host'),
@@ -577,10 +503,6 @@ def create_mysql_prompt(text_input, schema_info):
     for col in schema_info['columns']:
         schema_text += f"- {col['name']} ({col['type']}, {col['data_category']})\n"
         schema_text += f"  Non-null: {col['non_null_count']}, Unique values: {col['unique_values']}\n"
-        # Date format hints for MySQL
-        if col.get('detected_date_format_py'):
-            mysql_fmt = pyfmt_to_mysql(col['detected_date_format_py'])
-            schema_text += f"  Date format hint (string stored): {mysql_fmt} (use STR_TO_DATE)\n"
         if col['data_category'] == 'text/categorical' and 'sample_values' in col:
             schema_text += f"  Sample values: {col['sample_values']}\n"
         elif col['data_category'] == 'numeric' and 'min_value' in col:
@@ -603,10 +525,7 @@ INSTRUCTIONS:
 3. Keep column names EXACTLY as shown in schema; use backticks around identifiers when needed
 4. Use appropriate aggregate functions (SUM, AVG, COUNT, MAX, MIN) and GROUP BY when requested
 5. For filtering operations, use appropriate WHERE clauses based on data types
-6. For date/time operations:
-   - If a column is DATETIME/DATE in MySQL, you can compare directly or use DATE(), YEAR(), MONTH(), etc.
-   - If a date is stored as TEXT, first cast using STR_TO_DATE(column, '<format from hint>') and then compare. Always quote date literals like '2023-01-31'.
-   - If the sample shows ISO 'YYYY-MM-DDTHH:MM:SS', replace 'T' with a space inside STR_TO_DATE or use REPLACE(column,'T',' ').
+6. For date/time operations, use MySQL functions (DATE, YEAR, MONTH, etc.)
 7. For text searches, use LIKE (case-insensitive via LOWER if needed)
 8. Optimize for performance; include LIMIT if showing samples
 
@@ -977,13 +896,7 @@ def get_schema_info(df):
 		
 		# Add sample values for better context
 		if df[col].dtype in ['object', 'string']:
-			# collect a few non-null sample strings
-			samples = df[col].dropna().astype(str).head(10).tolist()
-			col_info["sample_values"] = json_safe(list(dict.fromkeys(samples))[:5])
-			# detect date format if looks like date
-			fmt_py = detect_date_format_from_samples(samples)
-			if fmt_py:
-				col_info["detected_date_format_py"] = fmt_py
+			col_info["sample_values"] = json_safe(df[col].dropna().unique()[:5].tolist())
 			col_info["data_category"] = "text/categorical"
 		elif str(df[col].dtype) in ['int64', 'float64', 'int32', 'float32']:
 			col_info["min_value"] = json_safe(df[col].min())
@@ -1057,10 +970,6 @@ def create_optimized_prompt(text_input, schema_info):
             schema_text += f"  Range: {col['min_value']} to {col['max_value']}, Average: {col['mean_value']}\n"
         elif col['data_category'] == 'datetime' and 'min_date' in col:
             schema_text += f"  Date range: {col['min_date']} to {col['max_date']}\n"
-        # Date format hints for CSV strings
-        if col.get('detected_date_format_py'):
-            duck_fmt = pyfmt_to_duckdb(col['detected_date_format_py'])
-            schema_text += f"  Date format hint (string stored): {duck_fmt} (use strptime)\n"
         schema_text += "\n"
     
     # Sample data
@@ -1082,10 +991,7 @@ INSTRUCTIONS:
 4. Use double quotes around column names if they contain spaces or special characters
 5. When user requests aggregations (sum, count, average, max, min, group by), include appropriate aggregate functions
 6. For filtering operations, use appropriate WHERE clauses based on data types
-7. For date/time operations:
-   - If a date column is native TIMESTAMP/DATE, compare directly or use date_part('year', ..) etc.
-   - If a date is stored as TEXT, first parse using strptime(column, '<format from hint>') and then CAST to DATE or TIMESTAMP for comparisons. Example: CAST(strptime("date_col", '%Y-%m-%d') AS DATE).
-   - If sample is ISO with 'T', use replace("date_col", 'T', ' ') before strptime if needed.
+7. For date/time operations, use DuckDB date functions if needed
 8. For text searches, use LIKE or ILIKE for case-insensitive matching
 9. When joining or grouping, consider the data relationships shown in sample data
 10. Optimize for performance with appropriate LIMIT clauses if displaying sample results
@@ -1192,112 +1098,85 @@ def generate_sql():
 
 @app.route('/analyze_data', methods=['POST'])
 def analyze_data():
-	"""
-	Endpoint for AI-powered data analysis.
-	Accepts output data and user query, returns intelligent insights.
-	"""
-	print("📊 Analyze data endpoint called")
-	
-	if not google_api_key:
-		return jsonify({"error": "Google API key is not configured."}), 500
+    """
+    Endpoint for AI-powered data analysis.
+    Accepts output data and user query, returns intelligent insights.
+    """
+    print("📊 Analyze data endpoint called")
+    
+    if not google_api_key:
+        return jsonify({"error": "Google API key is not configured."}), 500
 
-	# Configure the Google Generative AI model
-	genai.configure(api_key=google_api_key)
-	model = genai.GenerativeModel("gemini-2.0-flash-exp")
+    # Configure the Google Generative AI model
+    genai.configure(api_key=google_api_key)
+    model = genai.GenerativeModel("gemini-2.0-flash-exp")
 
-	# Parse JSON data from the request
-	data = request.get_json()
-	if not data:
-		return jsonify({"error": "Missing request data."}), 400
+    # Parse JSON data from the request
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing request data."}), 400
 
-	# Validate required fields
-	if 'query' not in data or 'data' not in data:
-		return jsonify({"error": "Missing query or data fields."}), 400
+    # Validate required fields
+    if 'query' not in data or 'data' not in data:
+        return jsonify({"error": "Missing query or data fields."}), 400
 
-	original_query = data['query']
-	output_data = data['data']
-	
-	try:
-		# Convert the data to a more readable format for analysis
-		if isinstance(output_data, list) and len(output_data) > 0:
-			# Extract headers and a sample of rows for analysis
-			headers = output_data[0] if output_data else []
-			sample_rows = output_data[1:min(11, len(output_data))]  # Take first 10 data rows
-			total_rows = len(output_data) - 1  # Subtract header row
-			
-			# Identify likely business fields
-			lower_headers = [str(h).lower() for h in headers]
-			candidate_date_cols = [h for h in headers if any(k in str(h).lower() for k in ["date","time","created","updated","month","year"]) ]
-			candidate_value_cols = [h for h in headers if any(k in str(h).lower() for k in ["amount","revenue","sales","price","cost","profit","qty","quantity","count","value"]) ]
-			categorical_cols = [h for h in headers if h not in candidate_value_cols and h not in candidate_date_cols]
-			
-			# Format data for analysis
-			data_summary = f"Dataset Overview:\n"
-			data_summary += f"- Total Columns: {len(headers)}\n"
-			data_summary += f"- Total Rows: {total_rows}\n"
-			data_summary += f"- Column Names: {', '.join(headers)}\n"
-			if candidate_date_cols:
-				data_summary += f"- Date-like columns: {', '.join(candidate_date_cols)}\n"
-			if candidate_value_cols:
-				data_summary += f"- Numeric value columns: {', '.join(candidate_value_cols)}\n"
-			if categorical_cols:
-				data_summary += f"- Categorical columns: {', '.join(categorical_cols[:6])}\n"
-			data_summary += "\nSample Data (first 10 rows):\n"
-			for i, row in enumerate(sample_rows, 1):
-				data_summary += f"Row {i}: {dict(zip(headers, row))}\n"
-		else:
-			data_summary = "No data available for analysis."
+    original_query = data['query']
+    output_data = data['data']
+    
+    try:
+        # Convert the data to a more readable format for analysis
+        if isinstance(output_data, list) and len(output_data) > 0:
+            # Extract headers and a sample of rows for analysis
+            headers = output_data[0] if output_data else []
+            sample_rows = output_data[1:min(6, len(output_data))]  # Take first 5 data rows
+            total_rows = len(output_data) - 1  # Subtract header row
+            
+            # Format data for analysis
+            data_summary = f"Dataset Overview:\n"
+            data_summary += f"- Total Columns: {len(headers)}\n"
+            data_summary += f"- Total Rows: {total_rows}\n"
+            data_summary += f"- Column Names: {', '.join(headers)}\n\n"
+            
+            data_summary += "Sample Data (first 5 rows):\n"
+            for i, row in enumerate(sample_rows, 1):
+                data_summary += f"Row {i}: {dict(zip(headers, row))}\n"
+        else:
+            data_summary = "No data available for analysis."
 
-		# Create analysis prompt (business/action oriented)
-		analysis_prompt = f"""
-You are a senior analytics consultant. Based on the user's goal and the dataset sample, produce sharp business insights and specific actions.
+        # Create analysis prompt
+        analysis_prompt = f"""
+You are an expert data analyst. Analyze the following dataset and provide intelligent insights.
 
-User Goal: "{original_query}"
+Original User Query: "{original_query}"
 
 {data_summary}
 
-Instructions:
-- Focus on measurable, decision-ready insights. Quantify wherever possible (%, counts, ranges, top/bottom items).
-- Organize output using the following structure and headings exactly.
-- Tailor insights to common business areas (growth, retention, conversion, product, operations) depending on the columns present.
-- If time-related fields exist, comment on trends/seasonality; if categories exist, compare segments; if numeric KPIs exist, compute deltas and outliers conceptually.
-- When the provided sample is small, infer likely patterns and explicitly label them as hypotheses to validate.
+Please provide a comprehensive analysis that includes:
+1. **Key Insights**: What are the most important findings from this data?
+2. **Data Patterns**: What patterns, trends, or correlations do you notice?
+3. **Business Implications**: What do these results mean from a business perspective?
+4. **Recommendations**: What actionable recommendations can you provide based on this analysis?
+5. **Additional Questions**: What other questions should be explored with this data?
 
-Format:
-TITLE: 1 concise line that captures the key takeaway
-
-KEY METRICS:
-- List 3–5 metrics with numbers or proportions when feasible
-
-INSIGHTS:
-- 3–6 bullets linking metrics to business meaning (why it matters)
-
-OPPORTUNITIES & ACTIONS:
-- 3–5 concrete actions (with who/what/when), prioritized by impact; include quick wins and 1 longer-term play
-
-RISKS / WATCHOUTS:
-- 1–3 caveats or data quality notes (e.g., small sample, seasonality, missing fields)
-
-NEXT QUERIES:
-- 2–4 follow-up questions or data pulls that would validate or deepen the findings
+Make your response conversational, engaging, and easy to understand. Use emojis where appropriate to make it more visually appealing. Keep it concise but informative (aim for 3-4 paragraphs).
 """
 
-		print(f"📝 Analysis prompt created for query: {original_query}")
-		
-		# Generate analysis using the AI model
-		response = model.generate_content(analysis_prompt)
-		analysis_text = response.text.strip()
-		
-		print(f"✅ Analysis generated successfully")
-		
-		return jsonify({
-			"analysis": analysis_text,
-			"success": True
-		})
-		
-	except Exception as e:
-		print(f"❌ Error during analysis: {str(e)}")
-		return jsonify({"error": f"Error generating analysis: {str(e)}"}), 500
+        print(f"📝 Analysis prompt created for query: {original_query}")
+        
+        # Generate analysis using the AI model
+        response = model.generate_content(analysis_prompt)
+        analysis_text = response.text.strip()
+        
+        print(f"✅ Analysis generated successfully")
+        
+        return jsonify({
+            "analysis": analysis_text,
+            "success": True
+        })
+        
+    except Exception as e:
+        print(f"❌ Error during analysis: {str(e)}")
+        return jsonify({"error": f"Error generating analysis: {str(e)}"}), 500
 
 @app.route('/chat_with_data', methods=['POST'])
 def chat_with_data():

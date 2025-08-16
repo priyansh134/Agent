@@ -61,8 +61,8 @@ const ChatPage = () => {
   const chartInstances = useRef({});
   const chatRecognition = useRef({});
   const interruptRecognition = useRef({}); // For detecting interruptions during AI speech
-  //const url ="http://127.0.0.1:5000";
-  const url = "https://agent-1-ll31.onrender.com";
+  const url ="http://127.0.0.1:5000";
+  //const url = "https://dashboard-agent-2.onrender.com";
   const [dbModalOpen, setDbModalOpen] = useState(false);
   const [dbConn, setDbConn] = useState({ host: '', port: '3306', user: '', password: '', database: '', table: '' });
   const [dbSchema, setDbSchema] = useState(null);
@@ -418,14 +418,12 @@ const ChatPage = () => {
           reader.onload = async () => {
             const csvText = reader.result;
             Papa.parse(csvText, {
-              skipEmptyLines: 'greedy',
               complete: async (results) => {
-                          const cleaned = (results.data || []).filter((row, idx) => {
-            if (idx === 0) return true; // keep header
-            if (!Array.isArray(row)) return false;
-            const allEmpty = row.every(cell => String(cell ?? '').trim() === '');
-            return !allEmpty;
-          });
+                const cleaned = (results.data || []).filter((row, idx) => {
+                  if (idx === 0) return true; // keep header
+                  if (!Array.isArray(row)) return false;
+                  return row.some(cell => String(cell ?? '').trim() !== '');
+                });
                 setConversationHistory(prev => prev.map(entry => entry.id === newConversationEntry.id ? { ...entry, data: cleaned, isLoading: false } : entry));
                 setdataRows(cleaned);
                 setIsLoading(false);
@@ -504,13 +502,11 @@ const ChatPage = () => {
       reader.onload = async () => {
         const csvText = reader.result;
         Papa.parse(csvText, {
-          skipEmptyLines: 'greedy',
           complete: async (results) => {
             const cleaned = (results.data || []).filter((row, idx) => {
               if (idx === 0) return true; // keep header
               if (!Array.isArray(row)) return false;
-              const allEmpty = row.every(cell => String(cell ?? '').trim() === '');
-              return !allEmpty;
+              return row.some(cell => String(cell ?? '').trim() !== '');
             });
             setConversationHistory(prev => prev.map(entry => entry.id === newConversationEntry.id ? { ...entry, data: cleaned, isLoading: false } : entry));
             setdataRows(cleaned);
@@ -2395,7 +2391,7 @@ const ChatPage = () => {
                         </div>
                       )}
                     </div>
-                    {/* <button
+                    <button
                       onClick={() => {
                         // Clear all state
                         setConversationHistory([]);
@@ -2417,7 +2413,7 @@ const ChatPage = () => {
                       className="flex items-center px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
                     >
                       Clear All
-                    </button> */}
+                    </button>
                   </div>
                 </div>
                 
