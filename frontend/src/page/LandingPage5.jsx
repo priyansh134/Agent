@@ -54,7 +54,7 @@ const stats = [
 
 const LandingPages = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showGoogleLogin, setShowGoogleLogin] = useState(true);
+  const [showGoogleLogin, setShowGoogleLogin] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +68,7 @@ const LandingPages = () => {
   const navigate = useNavigate();
   const { login: userLogin, isAuthenticated } = useUser();
   // const url= "http://127.0.0.1:5000"
-  const url = "https://dashboard-agent-2.onrender.com";
+  const url = "https://agent-1-ll31.onrender.com";
   
 
   // Redirect if already authenticated
