@@ -68,7 +68,6 @@ const ChatPage = () => {
   const [dbSchema, setDbSchema] = useState(null);
   const [isFetchingSchema, setIsFetchingSchema] = useState(false);
   const [useDatabaseMode, setUseDatabaseMode] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
   // Auth token helper
   const getAuthToken = () => {
@@ -2329,7 +2328,7 @@ const ChatPage = () => {
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-64px)]">
+        <div className="flex h-[calc(100vh-64px)]">
           {/* Main Content Area */}
           <div className="flex-1 p-6">
             {conversationHistory.length === 0 ? (
@@ -2356,7 +2355,7 @@ const ChatPage = () => {
               </div>
             ) : (
               // Conversation History
-              <div className="h-auto lg:h-full overflow-y-auto overflow-x-hidden custom-scrollbar" style={{scrollbarWidth: 'thin', scrollbarColor: '#6B7280 #F3F4F6'}}>
+              <div className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar" style={{scrollbarWidth: 'thin', scrollbarColor: '#6B7280 #F3F4F6'}}>
                 {/* Header with Dashboard Controls */}
                 <div className="sticky top-0 bg-gradient-to-br from-gray-50 to-gray-100 p-4 border-b border-gray-200 z-10">
                   <div className="flex items-center justify-between">
@@ -2630,23 +2629,23 @@ const ChatPage = () => {
                           </div>
                           <div className="text-xs text-gray-500 mb-3 flex items-center">
                             <span className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded-md border border-yellow-200">
-                              💡 Use scrollbars to view all data • Responsive container
+                              💡 Use scrollbars to view all data • Fixed 800px width × 400px height
                             </span>
                           </div>
 
-                          {/* Table - Responsive Size Container */}
+                          {/* Table - Fixed Size Container */}
                           <div className="rounded-lg border border-gray-200 bg-white">
                             <div 
                               className="overflow-auto custom-scrollbar" 
                               style={{
                                 width: '100%',
-                                maxWidth: '100%',
-                                height: 'clamp(260px, 45vh, 520px)',
+                                maxWidth: '800px',
+                                height: '400px',
                                 scrollbarWidth: 'thin', 
                                 scrollbarColor: '#6B7280 #F3F4F6'
                               }}
                             >
-                              <table className="w-full">
+                              <table className="w-full min-w-max">
                                 <thead className="bg-gray-50 sticky top-0 z-10">
                                   <tr>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap border-r border-gray-200">
@@ -2687,7 +2686,7 @@ const ChatPage = () => {
                             </div>
                           </div>
 
-                          {/* Chart - Responsive Size Container */}
+                          {/* Chart - Fixed Size Container */}
                           <div className="bg-gray-50 rounded-lg p-6">
                             <div className="flex items-center justify-between mb-4">
                               <h4 className="text-md font-medium text-gray-700">Data Visualization</h4>
@@ -2877,15 +2876,15 @@ const ChatPage = () => {
 
                             <div className="text-xs text-gray-500 mb-3">
                               <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded-md border border-purple-200">
-                                📐 Responsive container • Scroll to explore chart • Customize above
+                                📐 Fixed 800px × 400px container • Scroll to explore chart • Customize above
                               </span>
                             </div>
                             <div 
                               className="overflow-auto rounded-lg bg-white p-2 custom-scrollbar border-2 border-dashed border-gray-300" 
                               style={{
                                 width: '100%',
-                                maxWidth: '100%',
-                                height: 'clamp(300px, 50vh, 560px)',
+                                maxWidth: '800px',
+                                height: '400px',
                                 scrollbarWidth: 'thin', 
                                 scrollbarColor: '#6B7280 #F3F4F6'
                               }}
@@ -2899,7 +2898,7 @@ const ChatPage = () => {
                                   chartCustomization[conversation.id]?.yAxis,
                                   conversation.id
                                 )}
-                                style={{ height: '100%', width: '100%' }}
+                                style={{ height: '100%', width: '100%', minWidth: '600px', minHeight: '360px' }}
                                 onChartReady={(chart) => {
                                   chartInstances.current[conversation.id] = chart;
                                 }}
@@ -3181,7 +3180,7 @@ const ChatPage = () => {
                           <p className="text-gray-700 italic">Processing...</p>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-gray-200 bg-white" style={{maxWidth: '100%', height: 'clamp(300px, 40vh, 520px)'}}>
+                      <div className="rounded-lg border border-gray-200 bg-white" style={{maxWidth: '800px', height: '500px'}}>
                         <div className="flex items-center justify-center h-full">
                           <Skeleton />
                         </div>
@@ -3193,30 +3192,8 @@ const ChatPage = () => {
             )}
           </div>
 
-          {/* Mobile open button for sidebar */}
-          <div className="lg:hidden fixed bottom-4 right-4 z-50">
-            <button
-              onClick={() => setMobileSidebarOpen(true)}
-              className="px-4 py-2 rounded-full bg-blue-600 text-white shadow-lg flex items-center"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" /> Open Assistant
-            </button>
-          </div>
-
-          {/* Backdrop when mobile sidebar is open */}
-          {mobileSidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-              onClick={() => setMobileSidebarOpen(false)}
-            />
-          )}
-
           {/* Chat Sidebar */}
-          <div
-            className={`bg-white shadow-xl border-l border-gray-200 flex flex-col max-h-[calc(100vh-64px)] overflow-y-auto
-            lg:static fixed top-[64px] right-0 bottom-0 z-40 w-full lg:w-96 transform transition-transform lg:transform-none
-            ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}
-          >
+          <div className="w-96 bg-white shadow-xl border-l border-gray-200 flex flex-col">
             {/* Header */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3230,14 +3207,6 @@ const ChatPage = () => {
                   title="Start a new chat"
                 >
                   + New Chat
-                </button>
-                {/* Close drawer on mobile */}
-                <button
-                  className="ml-2 p-2 rounded hover:bg-gray-100 lg:hidden"
-                  onClick={() => setMobileSidebarOpen(false)}
-                  aria-label="Close Assistant"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
             </div>
@@ -3362,11 +3331,11 @@ const ChatPage = () => {
                 )}
               </div>
 
-              {/* Send Button - sticky bottom for mobile/desktop */}
-              <div className="p-4 border-t border-gray-100 sticky bottom-0 bg-white">
+              {/* Send Button */}
+              <div className="p-4 border-t border-gray-100">
                 <button
                   onClick={generateSQL}
-                  disabled={isLoading || (!useDatabaseMode && !filePath) || (useDatabaseMode && !dbSchema)}
+                disabled={isLoading || (!useDatabaseMode && !filePath) || (useDatabaseMode && !dbSchema)}
                   className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
