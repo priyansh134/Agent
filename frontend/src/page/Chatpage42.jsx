@@ -61,13 +61,14 @@ const ChatPage = () => {
   const chartInstances = useRef({});
   const chatRecognition = useRef({});
   const interruptRecognition = useRef({}); // For detecting interruptions during AI speech
-  const url ="http://127.0.0.1:5000";
-  //const url = "https://agent-last.onrender.com";
+  //const url ="http://127.0.0.1:5000";
+  const url = "https://agent-last.onrender.com";
   const [dbModalOpen, setDbModalOpen] = useState(false);
   const [dbConn, setDbConn] = useState({ host: '', port: '3306', user: '', password: '', database: '', table: '' });
   const [dbSchema, setDbSchema] = useState(null);
   const [isFetchingSchema, setIsFetchingSchema] = useState(false);
   const [useDatabaseMode, setUseDatabaseMode] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
   // Auth token helper
   const getAuthToken = () => {
@@ -3192,8 +3193,30 @@ const ChatPage = () => {
             )}
           </div>
 
+          {/* Mobile open button for sidebar */}
+          <div className="lg:hidden fixed bottom-4 right-4 z-50">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="px-4 py-2 rounded-full bg-blue-600 text-white shadow-lg flex items-center"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" /> Open Assistant
+            </button>
+          </div>
+
+          {/* Backdrop when mobile sidebar is open */}
+          {mobileSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+
           {/* Chat Sidebar */}
-          <div className="w-full lg:w-96 bg-white shadow-xl border-l border-gray-200 flex flex-col">
+          <div
+            className={`bg-white shadow-xl border-l border-gray-200 flex flex-col max-h-[calc(100vh-64px)] overflow-y-auto
+            lg:static fixed top-[64px] right-0 bottom-0 z-40 w-full lg:w-96 transform transition-transform lg:transform-none
+            ${mobileSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}
+          >
             {/* Header */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -3207,6 +3230,14 @@ const ChatPage = () => {
                   title="Start a new chat"
                 >
                   + New Chat
+                </button>
+                {/* Close drawer on mobile */}
+                <button
+                  className="ml-2 p-2 rounded hover:bg-gray-100 lg:hidden"
+                  onClick={() => setMobileSidebarOpen(false)}
+                  aria-label="Close Assistant"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
             </div>
@@ -3331,11 +3362,11 @@ const ChatPage = () => {
                 )}
               </div>
 
-              {/* Send Button */}
-              <div className="p-4 border-t border-gray-100">
+              {/* Send Button - sticky bottom for mobile/desktop */}
+              <div className="p-4 border-t border-gray-100 sticky bottom-0 bg-white">
                 <button
                   onClick={generateSQL}
-                disabled={isLoading || (!useDatabaseMode && !filePath) || (useDatabaseMode && !dbSchema)}
+                  disabled={isLoading || (!useDatabaseMode && !filePath) || (useDatabaseMode && !dbSchema)}
                   className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
