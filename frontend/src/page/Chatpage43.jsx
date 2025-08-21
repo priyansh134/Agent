@@ -9,7 +9,6 @@ import { QueryInput } from "../components/QueryInput";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import PptxGenJS from 'pptxgenjs';
-import * as XLSX from 'xlsx';
 import { useUser } from '../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -211,7 +210,7 @@ const ChatPage = () => {
     { type: "area", icon: LineChart, label: "Area Chart" },
     { type: "horizontalBar", icon: BarChartIcon, label: "Horizontal Bar" },
     { type: "donut", icon: PieChart, label: "Donut Chart" },
-    //{ type: "scatter", icon: LineChart, label: "Scatter Plot" },
+   // { type: "scatter", icon: LineChart, label: "Scatter Plot" },
     { type: "funnel", icon: BarChartIcon, label: "Funnel Chart" },
   ];
 
@@ -247,32 +246,9 @@ const ChatPage = () => {
     }
 
     const formData = new FormData();
+    formData.append('file', file);
 
     try {
-      const lowerName = (file.name || '').toLowerCase();
-      const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls');
-
-      if (isExcel) {
-        // Read workbook and convert first sheet to CSV
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        if (!firstSheetName) {
-          throw new Error('No sheets found in the Excel file.');
-        }
-        const worksheet = workbook.Sheets[firstSheetName];
-        const csvText = XLSX.utils.sheet_to_csv(worksheet);
-
-        const csvBlob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
-        const csvFileName = lowerName.replace(/\.(xlsx|xls)$/i, '.csv') || `converted_${Date.now()}.csv`;
-
-        // Append as a CSV file so backend treats it like a normal CSV upload
-        formData.append('file', csvBlob, csvFileName);
-      } else {
-        // CSV/TXT or other supported plaintext files
-        formData.append('file', file);
-      }
-
       const res = await axios.post(`${url}/upload_file`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -280,7 +256,7 @@ const ChatPage = () => {
       });
       setfilePath(res.data.filePath);
       setUseDatabaseMode(false);
-      showNotification(isExcel ? '✅ Excel converted to CSV and uploaded. Using CSV mode for queries.' : '✅ File uploaded. Using CSV mode for queries.', 'success');
+      showNotification('✅ File uploaded. Using CSV mode for queries.', 'success');
       alert("File uploaded successfully!");
       return res.data;
     } catch (error) {
@@ -3444,7 +3420,7 @@ const ChatPage = () => {
                   id="file-upload"
                   className="hidden"
                   onChange={(e) => uploadFile(e.target.files[0])}
-                  accept=".csv,.txt,.xlsx,.xls"
+                  accept=".csv,.txt"
                 />
                 <label
                   htmlFor="file-upload"
@@ -3452,7 +3428,7 @@ const ChatPage = () => {
                 >
                   <Upload className="h-5 w-5 text-gray-400 mr-2" />
                   <span className="text-sm text-gray-600">
-                    {filePath ? "File uploaded ✓" : "Upload CSV/Excel file"}
+                    {filePath ? "File uploaded ✓" : "Upload CSV/TXT file"}
                   </span>
                 </label>
               </div>
