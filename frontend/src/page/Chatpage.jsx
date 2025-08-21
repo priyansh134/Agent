@@ -210,7 +210,7 @@ const ChatPage = () => {
     { type: "area", icon: LineChart, label: "Area Chart" },
     { type: "horizontalBar", icon: BarChartIcon, label: "Horizontal Bar" },
     { type: "donut", icon: PieChart, label: "Donut Chart" },
-    { type: "scatter", icon: LineChart, label: "Scatter Plot" },
+    //{ type: "scatter", icon: LineChart, label: "Scatter Plot" },
     { type: "funnel", icon: BarChartIcon, label: "Funnel Chart" },
   ];
 
@@ -909,28 +909,28 @@ const ChatPage = () => {
           }],
           tooltip: { trigger: 'item' }
         };
-      case 'scatter': {
-        const parsed = rows.map(row => [
-          parseFloat(row[xAxisIndex]),
-          parseFloat(row[yAxisIndex])
-        ]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
-        if (parsed.length === 0) return {};
-        return {
-          title: {
-            text: `${headers[yAxisIndex]} vs ${headers[xAxisIndex]} (Scatter)`,
-            left: 'center',
-            textStyle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }
-          },
-          xAxis: { type: 'value', name: headers[xAxisIndex] },
-          yAxis: { type: 'value', name: headers[yAxisIndex] },
-          series: [{
-            type: 'scatter',
-            data: parsed,
-            itemStyle: { color: colors[2] },
-          }],
-          tooltip: { trigger: 'item' }
-        };
-      }
+      // case 'scatter': {
+      //   const parsed = rows.map(row => [
+      //     parseFloat(row[xAxisIndex]),
+      //     parseFloat(row[yAxisIndex])
+      //   ]).filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
+      //   if (parsed.length === 0) return {};
+      //   return {
+      //     title: {
+      //       text: `${headers[yAxisIndex]} vs ${headers[xAxisIndex]} (Scatter)`,
+      //       left: 'center',
+      //       textStyle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }
+      //     },
+      //     xAxis: { type: 'value', name: headers[xAxisIndex] },
+      //     yAxis: { type: 'value', name: headers[yAxisIndex] },
+      //     series: [{
+      //       type: 'scatter',
+      //       data: parsed,
+      //       itemStyle: { color: colors[2] },
+      //     }],
+      //     tooltip: { trigger: 'item' }
+      //   };
+      // }
       case 'funnel':
         return {
           title: {
